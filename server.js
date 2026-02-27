@@ -6,6 +6,7 @@ const cors = require("cors");
 
 const app = express();
 const bannerRoutes = require("./routes/bannerRoutes");
+const scheduleRoutes = require("./routes/scheduleRoutes");
 
 app.use(cors());
 app.use(express.json());
@@ -16,6 +17,7 @@ mongoose.connect(process.env.MONGO_URL)
 
 app.use("/api/admin", require("./routes/adminAuthRoutes"));
 app.use("/api/banners", bannerRoutes);
+app.use("/api/schedule", scheduleRoutes);
 
 app.listen(process.env.PORT || 9000, ()=>{
   console.log("Server running 🔥");
