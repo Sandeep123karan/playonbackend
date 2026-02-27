@@ -1,101 +1,42 @@
-// const mongoose = require("mongoose");
-// const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const Admin = require("../models/Admin");
 
-// const adminSchema = new mongoose.Schema({
-//   name: {
-//     type: String,
-//     required: true
-//   },
+/* ================= PROTECT ================= */
+exports.protectAdmin = async (req, res, next) => {
+  try {
+    let token;
 
-//   email: {
-//     type: String,
-//     required: true,
-//     unique: true
-//   },
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    }
 
-//   password: {
-//     type: String,
-//     required: true
-//   },
+    if (!token) {
+      return res.status(401).json({ message: "Not authorized, no token" });
+    }
 
-//   role: {
-//     type: String,
-//     default: "admin"
-//   }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-// }, { timestamps: true });
+    const admin = await Admin.findById(decoded.id).select("-password");
 
+    if (!admin) {
+      return res.status(401).json({ message: "Admin not found" });
+    }
 
-// /* ================= HASH PASSWORD ================= */
-// adminSchema.pre("save", async function (next) {
-//   try {
-//     if (!this.isModified("password")) {
-//       return next();
-//     }
-
-//     const salt = await bcrypt.genSalt(10);
-//     this.password = await bcrypt.hash(this.password, salt);
-
-//     next();
-
-//   } catch (error) {
-//     next(error);
-//   }
-// });
-
-
-// /* ================= MATCH PASSWORD ================= */
-// adminSchema.methods.matchPassword = async function (enteredPassword) {
-//   return await bcrypt.compare(enteredPassword, this.password);
-// };
-
-// module.exports = mongoose.model("Admin", adminSchema);
-
-
-
-
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-
-const adminSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true
-  },
-
-  email: {
-    type: String,
-    required: true,
-    unique: true
-  },
-
-  password: {
-    type: String,
-    required: true
-  },
-
-  role: {
-    type: String,
-    default: "admin"
+    req.admin = admin;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: "Not authorized, token failed" });
   }
-
-}, { timestamps: true });
-
-
-/* ================= HASH PASSWORD ================= */
-adminSchema.pre("save", async function () {
-
-  if (!this.isModified("password")) return;
-
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-
-});
-
-
-/* ================= MATCH PASSWORD ================= */
-adminSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
 };
 
-module.exports = mongoose.model("Admin", adminSchema);
+/* ================= ADMIN ONLY ================= */
+exports.adminOnly = (req, res, next) => {
+  if (req.admin && req.admin.role === "admin") {
+    next();
+  } else {
+    res.status(403).json({ message: "Admin only access" });
+  }
+};
