@@ -10,6 +10,9 @@ const scheduleRoutes = require("./routes/scheduleRoutes");
 const highlightRoutes = require("./routes/highlightRoutes");
 const liveTvRoutes = require("./routes/liveTvRoutes");
 const prematchRoutes = require("./routes/prematchRoutes");
+const userRoutes = require("./routes/userRoutes");
+const planRoutes = require("./routes/planRoutes");
+
 
 app.use(cors());
 app.use(express.json());
@@ -24,6 +27,10 @@ app.use("/api/schedule", scheduleRoutes);
 app.use("/api/highlight", highlightRoutes);
 app.use("/api/live-tv", liveTvRoutes);
 app.use("/api/prematch", prematchRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/plans", planRoutes);          // 🔥 plans
+
+
 
 app.listen(process.env.PORT || 9000, ()=>{
   console.log("Server running 🔥");
