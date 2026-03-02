@@ -1,85 +1,246 @@
-const Admin = require("../models/Admin");
-const jwt = require("jsonwebtoken");
+const LiveTV = require("../models/LiveTV");
 
-/* ================= GENERATE TOKEN ================= */
-const generateToken = (admin) => {
-  return jwt.sign(
-    {
-      id: admin._id,
-      role: admin.role,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
-};
+/* =====================================================
+   ADMIN: ADD LIVE TV
+===================================================== */
+// exports.addLiveTV = async (req, res) => {
+//   try {
+//     const { name, streamUrl, category, language, country, isPremium, order, description } = req.body;
 
-/* ================= REGISTER ADMIN ================= */
-exports.registerAdmin = async (req, res) => {
+//     if (!name || !streamUrl) {
+//       return res.status(400).json({ message: "Name and Stream URL required" });
+//     }
+
+//     const logo = req.file ? req.file.path : "";
+
+//     const tv = await LiveTV.create({
+//       name,
+//       streamUrl,
+//       category,
+//       language,
+//       country,
+//       isPremium,
+//       order,
+//       description,
+//       logo
+//     });
+
+//     res.status(201).json({
+//       success: true,
+//       message: "Live TV added",
+//       data: tv
+//     });
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+exports.addLiveTV = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, streamUrl, category, language, country, isPremium, order, description } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "All fields required" });
+    if (!name || !streamUrl) {
+      return res.status(400).json({ message: "Name and Stream URL required" });
     }
 
-    const adminExist = await Admin.findOne({ email });
-    if (adminExist) {
-      return res.status(400).json({ message: "Admin already exists" });
+    const logo = req.file ? req.file.path : req.body.logo;  // 🔥 important
+
+    if (!logo) {
+      return res.status(400).json({ message: "Logo required" });
     }
 
-    const admin = await Admin.create({ name, email, password });
+    const tv = await LiveTV.create({
+      name,
+      logo,
+      streamUrl,
+      category,
+      language,
+      country,
+      isPremium,
+      order,
+      description
+    });
 
     res.status(201).json({
       success: true,
-      message: "Admin registered successfully",
-      token: generateToken(admin),
-      admin: {
-        id: admin._id,
-        name: admin.name,
-        email: admin.email,
-        role: admin.role,
-      },
+      message: "Live TV added",
+      data: tv
     });
+
   } catch (err) {
-    console.log("Register error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.log(err);
+    res.status(500).json({ message: err.message });
   }
 };
 
-/* ================= LOGIN ADMIN ================= */
-exports.loginAdmin = async (req, res) => {
+/* =====================================================
+   ADMIN: UPDATE LIVE TV
+===================================================== */
+exports.updateLiveTV = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const tv = await LiveTV.findById(req.params.id);
+    if (!tv) return res.status(404).json({ message: "Channel not found" });
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email & password required" });
+    const {
+      name,
+      streamUrl,
+      category,
+      language,
+      country,
+      status,
+      isPremium,
+      order,
+      description
+    } = req.body;
+
+    if (req.file) {
+      tv.logo = req.file.path;
     }
 
-    const admin = await Admin.findOne({ email });
+    tv.name = name || tv.name;
+    tv.streamUrl = streamUrl || tv.streamUrl;
+    tv.category = category || tv.category;
+    tv.language = language || tv.language;
+    tv.country = country || tv.country;
+    tv.status = status || tv.status;
+    tv.isPremium = isPremium ?? tv.isPremium;
+    tv.order = order ?? tv.order;
+    tv.description = description || tv.description;
 
-    if (!admin) {
-      return res.status(400).json({ message: "Invalid email" });
-    }
-
-    const isMatch = await admin.matchPassword(password);
-
-    if (!isMatch) {
-      return res.status(400).json({ message: "Wrong password" });
-    }
+    await tv.save();
 
     res.json({
       success: true,
-      message: "Login successful",
-      token: generateToken(admin),
-      admin: {
-        id: admin._id,
-        name: admin.name,
-        email: admin.email,
-        role: admin.role,
-      },
+      message: "Live TV updated",
+      data: tv
     });
+
   } catch (err) {
-    console.log("Login error:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+/* =====================================================
+   ADMIN: DELETE LIVE TV
+===================================================== */
+exports.deleteLiveTV = async (req, res) => {
+  try {
+    const tv = await LiveTV.findById(req.params.id);
+    if (!tv) return res.status(404).json({ message: "Channel not found" });
+
+    await tv.deleteOne();
+
+    res.json({
+      success: true,
+      message: "Channel deleted"
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+/* =====================================================
+   ADMIN: TOGGLE ACTIVE/INACTIVE
+===================================================== */
+exports.toggleLiveTV = async (req, res) => {
+  try {
+    const tv = await LiveTV.findById(req.params.id);
+    if (!tv) return res.status(404).json({ message: "Channel not found" });
+
+    tv.status = tv.status === "active" ? "inactive" : "active";
+    await tv.save();
+
+    res.json({
+      success: true,
+      message: "Status updated",
+      data: tv
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+/* =====================================================
+   USER: GET ALL LIVE TV
+===================================================== */
+exports.getAllLiveTV = async (req, res) => {
+  try {
+    const tv = await LiveTV.find({ status: "active" })
+      .sort({ order: 1, createdAt: -1 });
+
+    res.json({
+      success: true,
+      total: tv.length,
+      data: tv
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+/* =====================================================
+   USER: GET BY CATEGORY
+===================================================== */
+exports.getByCategory = async (req, res) => {
+  try {
+    const category = req.params.category;
+
+    const tv = await LiveTV.find({
+      category: category,
+      status: "active"
+    });
+
+    res.json({
+      success: true,
+      total: tv.length,
+      data: tv
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+/* =====================================================
+   USER: SINGLE CHANNEL
+===================================================== */
+exports.getSingleTV = async (req, res) => {
+  try {
+    const tv = await LiveTV.findById(req.params.id);
+
+    if (!tv) return res.status(404).json({ message: "Not found" });
+
+    res.json({
+      success: true,
+      data: tv
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+/* =====================================================
+   VIEWER COUNT INCREASE
+===================================================== */
+exports.increaseViewer = async (req, res) => {
+  try {
+    await LiveTV.findByIdAndUpdate(req.params.id, {
+      $inc: { viewers: 1 }
+    });
+
+    res.json({ success: true });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
