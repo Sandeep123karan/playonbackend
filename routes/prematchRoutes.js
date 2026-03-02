@@ -1,67 +1,41 @@
-const mongoose = require("mongoose");
+const express = require("express");
+const router = express.Router();
+const upload = require("../middleware/upload");
 
-const prematchSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true
-  },
+const {
+  createPrematch,
+  getAllPrematch,
+  getSinglePrematch,
+  updatePrematch,
+  deletePrematch,
+  toggleLive
+} = require("../controllers/prematchController");
 
-  imageUrl: {
-    type: String,
-    default: ""
-  },
+const { protectAdmin, adminOnly } = require("../middleware/authMiddleware");
 
-  videoUrl: {
-    type: String,
-    default: ""
-  },
+/* upload fields */
+const cpUpload = upload.fields([
+  { name: "image", maxCount: 1 },
+  { name: "team1Logo", maxCount: 1 },
+  { name: "team2Logo", maxCount: 1 }
+]);
 
-  league: {
-    type: String,
-    default: ""
-  },
+// admin create
+router.post("/create", protectAdmin, adminOnly, cpUpload, createPrematch);
 
-  matchType: {
-    type: String,
-    enum: ["LIVE", "UPCOMING", "COMPLETED"],
-    default: "UPCOMING"
-  },
+// get all
+router.get("/all", getAllPrematch);
 
-  team1: {
-    type: String,
-    required: true
-  },
+// single
+router.get("/:id", getSinglePrematch);
 
-  team2: {
-    type: String,
-    required: true
-  },
+// update
+router.put("/update/:id", protectAdmin, adminOnly, cpUpload, updatePrematch);
 
-  team1Logo: String,
-  team2Logo: String,
+// delete
+router.delete("/delete/:id", protectAdmin, adminOnly, deletePrematch);
 
-  isLive: {
-    type: Boolean,
-    default: false
-  },
+// live toggle
+router.put("/live/:id", protectAdmin, adminOnly, toggleLive);
 
-  viewers: {
-    type: Number,
-    default: 0
-  },
-
-  matchDate: {
-    type: Date
-  },
-
-  stadium: String,
-  country: String,
-
-  analysis: {
-    type: String,   // prematch analysis text
-    default: ""
-  }
-
-}, { timestamps: true });
-
-module.exports = mongoose.model("Prematch", prematchSchema);
+module.exports = router;
