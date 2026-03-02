@@ -30,6 +30,7 @@ app.use("/api/prematch", prematchRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/plans", planRoutes);          // 🔥 plans
 app.use("/api/subscription", require("./routes/subscriptionRoutes"));
+app.use("/api/payment", require("./routes/paymentRoutes"));
 
 
 
