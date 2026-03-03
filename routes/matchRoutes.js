@@ -1,20 +1,13 @@
-const mongoose = require("mongoose");
+const express = require("express");
+const router = express.Router();
+const matchController = require("../controllers/matchController");
+const { protectAdmin, adminOnly } = require("../middleware/authMiddleware");
 
-const matchCardSchema = new mongoose.Schema(
-  {
-    title: { type: String, required: true },
-    imageUrl: { type: String, required: true },
-    matchType: { type: String, enum: ["LIVE", "UPCOMING"], default: "UPCOMING" },
-    videoUrl: { type: String, default: "" },
-    league: { type: String, required: true },
-    team1: { type: String, required: true },
-    team2: { type: String, required: true },
-    team1Logo: { type: String, required: true },
-    team2Logo: { type: String, required: true },
-    isLive: { type: Boolean, default: false },
-    viewers: { type: Number, default: 0 }
-  },
-  { timestamps: true }
-);
+router.get("/", matchController.getAllMatches);
+router.get("/:id", matchController.getSingleMatch);
 
-module.exports = mongoose.model("MatchCard", matchCardSchema);
+router.post("/add", protectAdmin, adminOnly, matchController.addMatch);
+router.put("/:id", protectAdmin, adminOnly, matchController.updateMatch);
+router.delete("/:id", protectAdmin, adminOnly, matchController.deleteMatch);
+
+module.exports = router;
