@@ -151,3 +151,21 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// ================= GET ALL USERS =================
+exports.getAllUsers = async (req, res) => {
+  try {
+
+    const users = await User.find().select("-password");
+
+    res.json({
+      message: "All users fetched successfully",
+      count: users.length,
+      users
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+};
