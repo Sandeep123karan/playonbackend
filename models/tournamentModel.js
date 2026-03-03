@@ -1,35 +1,21 @@
-const express = require("express");
-const router = express.Router();
+const mongoose = require("mongoose");
 
-const tournamentController = require("../controllers/tournamentController");
+const tournamentSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: [true, "Tournament title is required"],
+      trim: true
+    },
 
-// 🔐 Admin Middleware
-const { protectAdmin, adminOnly } = require("../middleware/authMiddleware");
-
-// Public Routes
-router.get("/", tournamentController.getAllTournaments);
-router.get("/:id", tournamentController.getSingleTournament);
-
-// 🔐 Protected Routes (Token Required)
-router.post(
-  "/add",
-  protectAdmin,
-  adminOnly,
-  tournamentController.addTournament
+    image: {
+      type: String,
+      required: [true, "Tournament image is required"]
+    }
+  },
+  {
+    timestamps: true
+  }
 );
 
-router.put(
-  "/:id",
-  protectAdmin,
-  adminOnly,
-  tournamentController.updateTournament
-);
-
-router.delete(
-  "/:id",
-  protectAdmin,
-  adminOnly,
-  tournamentController.deleteTournament
-);
-
-module.exports = router;
+module.exports = mongoose.model("Tournament", tournamentSchema);
