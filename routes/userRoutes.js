@@ -7,7 +7,8 @@ const {
   registerUser,
   loginUser,
   getProfile,
-  updateProfile
+  updateProfile,
+  getAllUsers
 } = require("../controllers/userController");
 
 const { protectUser } = require("../middleware/auth");
@@ -18,5 +19,7 @@ router.post("/login", loginUser);
 // 🔐 profile routes
 router.get("/profile", protectUser, getProfile);
 router.put("/profile", protectUser, updateProfile);
-
+router.get("/", protectUser, getAllUsers);
 module.exports = router;
+
+
