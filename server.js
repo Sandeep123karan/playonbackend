@@ -36,6 +36,7 @@ app.use("/api/payment", require("./routes/paymentRoutes"));
 app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/premium", require("./routes/premiumContentRoutes"));
+app.use("/api/highlight-category", require("./routes/highlightCategoryRoutes"));
 
 
 app.listen(process.env.PORT || 9000, ()=>{
