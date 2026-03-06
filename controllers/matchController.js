@@ -1,9 +1,16 @@
 const MatchCard = require("../models/matchCardModel");
+const mongoose = require("mongoose");
 
-/* ================= ADD MATCH ================= */
+
+/* ===============================
+   ➕ ADD MATCH
+================================ */
+
 exports.addMatch = async (req, res) => {
   try {
+
     const {
+      tournamentId,
       title,
       imageUrl,
       matchType,
@@ -13,27 +20,30 @@ exports.addMatch = async (req, res) => {
       team2,
       team1Logo,
       team2Logo,
-      isLive,
-      viewers
+      matchDate,
+      matchTime,
+      venue,
+      isLive
     } = req.body;
 
-    // Basic Validation
-    if (
-      !title ||
-      !imageUrl ||
-      !league ||
-      !team1 ||
-      !team2 ||
-      !team1Logo ||
-      !team2Logo
-    ) {
+    // Required validation
+    if (!tournamentId || !title || !imageUrl || !team1 || !team2) {
       return res.status(400).json({
         success: false,
-        message: "Please fill all required fields",
+        message: "tournamentId, title, imageUrl, team1, team2 are required"
+      });
+    }
+
+    // ObjectId validation
+    if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid tournamentId"
       });
     }
 
     const match = await MatchCard.create({
+      tournamentId,
       title,
       imageUrl,
       matchType,
@@ -43,111 +53,226 @@ exports.addMatch = async (req, res) => {
       team2,
       team1Logo,
       team2Logo,
-      isLive,
-      viewers
+      matchDate,
+      matchTime,
+      venue,
+      isLive
     });
 
     res.status(201).json({
       success: true,
-      message: "Match added successfully",
-      data: match,
+      message: "Match created successfully",
+      data: match
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
+
   }
 };
 
-/* ================= GET ALL MATCHES ================= */
+
+
+/* ===============================
+   📋 GET ALL MATCHES
+================================ */
+
 exports.getAllMatches = async (req, res) => {
   try {
-    // LIVE matches top pe
-    const matches = await MatchCard.find().sort({
-      isLive: -1,
-      createdAt: -1,
-    });
+
+    const matches = await MatchCard
+      // .find()
+      .find({ tournamentId: { $ne: null } })
+      .populate("tournamentId", "title")
+      .sort({ matchDate: 1 });
 
     res.status(200).json({
       success: true,
       count: matches.length,
-      data: matches,
+      data: matches
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
   }
 };
 
-/* ================= GET SINGLE MATCH ================= */
+
+
+/* ===============================
+   📋 GET MATCHES BY TOURNAMENT
+================================ */
+
+exports.getMatchesByTournament = async (req, res) => {
+  try {
+
+    const { tournamentId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid tournamentId"
+      });
+    }
+
+    const matches = await MatchCard
+      .find({ tournamentId })
+      .sort({ matchDate: 1 });
+
+    res.status(200).json({
+      success: true,
+      count: matches.length,
+      data: matches
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
+  }
+};
+
+
+
+/* ===============================
+   🔍 GET SINGLE MATCH
+================================ */
+
 exports.getSingleMatch = async (req, res) => {
   try {
-    const match = await MatchCard.findById(req.params.id);
+
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid match id"
+      });
+    }
+
+    const match = await MatchCard
+      .findById(id)
+      .populate("tournamentId", "title");
 
     if (!match) {
       return res.status(404).json({
         success: false,
-        message: "Match not found",
+        message: "Match not found"
       });
     }
 
     res.status(200).json({
       success: true,
-      data: match,
+      data: match
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
   }
 };
 
-/* ================= UPDATE MATCH ================= */
+
+
+/* ===============================
+   ✏ UPDATE MATCH
+================================ */
+
 exports.updateMatch = async (req, res) => {
   try {
-    const match = await MatchCard.findById(req.params.id);
+
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid match id"
+      });
+    }
+
+    const match = await MatchCard.findByIdAndUpdate(
+      id,
+      req.body,
+      { new: true }
+    );
 
     if (!match) {
       return res.status(404).json({
         success: false,
-        message: "Match not found",
+        message: "Match not found"
       });
     }
-
-    Object.assign(match, req.body);
-
-    await match.save();
 
     res.status(200).json({
       success: true,
       message: "Match updated successfully",
-      data: match,
+      data: match
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
   }
 };
 
-/* ================= DELETE MATCH ================= */
+
+
+/* ===============================
+   ❌ DELETE MATCH
+================================ */
+
 exports.deleteMatch = async (req, res) => {
   try {
-    const match = await MatchCard.findByIdAndDelete(req.params.id);
+
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid match id"
+      });
+    }
+
+    const match = await MatchCard.findByIdAndDelete(id);
 
     if (!match) {
       return res.status(404).json({
         success: false,
-        message: "Match not found",
+        message: "Match not found"
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Match deleted successfully",
+      message: "Match deleted successfully"
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
   }
 };
