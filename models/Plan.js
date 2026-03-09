@@ -1,52 +1,40 @@
 const mongoose = require("mongoose");
 
-// plan duration options schema
 const optionSchema = new mongoose.Schema({
   label: {
-    type: String,           // 1 Month, 3 Months
+    type: String,
     required: true
   },
   duration: {
-    type: Number,           // days (30, 90, 180)
+    type: Number,
     required: true
   },
   price: {
-    type: Number,           // 99,199
+    type: Number,
     required: true
   }
-}, { _id: true });
+});
 
-
-// main plan schema
 const planSchema = new mongoose.Schema(
   {
     title: {
       type: String,
       required: true,
-      enum: ["Ads Free", "All Content Free"]
+      enum: ["Ads Free", "Ads Free + Content Free"]
     },
 
-    description: {
-      type: String
-    },
+    description: String,
 
-    options: [optionSchema],   // multiple pricing options
+    options: [optionSchema],
 
-    features: [
-      {
-        type: String
-      }
-    ],
+    features: [String],
 
     status: {
       type: Boolean,
       default: true
     }
-
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Plan", planSchema);
