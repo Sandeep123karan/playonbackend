@@ -14,23 +14,66 @@ const razorpay = new Razorpay({
 
 
 // ================= CREATE ORDER =================
+// exports.createOrder = async (req, res) => {
+//   try {
+//     const { planId } = req.body;
+
+//     if (!planId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "planId required"
+//       });
+//     }
+
+//     if (!mongoose.Types.ObjectId.isValid(planId)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid planId"
+//       });
+//     }
+
+//     const plan = await Plan.findById(planId);
+
+//     if (!plan) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Plan not found"
+//       });
+//     }
+
+//     const order = await razorpay.orders.create({
+//       amount: plan.price * 100,
+//       currency: "INR",
+//       receipt: "receipt_" + Date.now()
+//     });
+
+//     await Subscription.create({
+//       user: req.user.id,
+//       plan: plan._id,
+//       orderId: order.id,
+//       amount: plan.price,
+//       status: "pending"
+//     });
+
+//     res.json({
+//       success: true,
+//       orderId: order.id,
+//       amount: plan.price,
+//       key: process.env.RAZORPAY_KEY_ID
+//     });
+
+//   } catch (error) {
+//     console.log("CREATE ORDER ERROR:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
 exports.createOrder = async (req, res) => {
   try {
-    const { planId } = req.body;
 
-    if (!planId) {
-      return res.status(400).json({
-        success: false,
-        message: "planId required"
-      });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(planId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid planId"
-      });
-    }
+    const { planId, optionId } = req.body;
 
     const plan = await Plan.findById(planId);
 
@@ -41,8 +84,17 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    const option = plan.options.id(optionId);
+
+    if (!option) {
+      return res.status(404).json({
+        success: false,
+        message: "Plan option not found"
+      });
+    }
+
     const order = await razorpay.orders.create({
-      amount: plan.price * 100,
+      amount: option.price * 100,
       currency: "INR",
       receipt: "receipt_" + Date.now()
     });
@@ -51,19 +103,18 @@ exports.createOrder = async (req, res) => {
       user: req.user.id,
       plan: plan._id,
       orderId: order.id,
-      amount: plan.price,
+      amount: option.price,
       status: "pending"
     });
 
     res.json({
       success: true,
       orderId: order.id,
-      amount: plan.price,
+      amount: option.price,
       key: process.env.RAZORPAY_KEY_ID
     });
 
   } catch (error) {
-    console.log("CREATE ORDER ERROR:", error);
     res.status(500).json({
       success: false,
       message: error.message
