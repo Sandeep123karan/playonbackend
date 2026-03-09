@@ -6,7 +6,8 @@ const {
   getSinglePlan,
   createPlan,
   updatePlan,
-  deletePlan
+  deletePlan,
+  togglePlanStatus
 } = require("../controllers/planController");
 
 const { protectUser } = require("../middleware/auth");
@@ -19,5 +20,6 @@ router.get("/:id", getSinglePlan);
 router.post("/create", protectUser, createPlan);
 router.put("/:id", protectUser, updatePlan);
 router.delete("/:id", protectUser, deletePlan);
+router.put("/toggle/:id", protectUser, togglePlanStatus);
 
 module.exports = router;
