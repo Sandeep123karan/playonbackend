@@ -1,3 +1,5 @@
+
+
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const mongoose = require("mongoose");
@@ -9,7 +11,6 @@ const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_SECRET
 });
-
 
 
 /* ================= CREATE ORDER ================= */
@@ -49,14 +50,14 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    // create razorpay order
+    // Razorpay order create
     const order = await razorpay.orders.create({
       amount: option.price * 100,
       currency: "INR",
       receipt: "receipt_" + Date.now()
     });
 
-    // create pending subscription
+    // Create pending subscription
     await Subscription.create({
       user: req.user.id,
       plan: plan._id,
@@ -85,7 +86,6 @@ exports.createOrder = async (req, res) => {
 };
 
 
-
 /* ================= VERIFY PAYMENT ================= */
 exports.verifyPayment = async (req, res) => {
   try {
@@ -98,7 +98,7 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // verify razorpay signature
+    // Verify Razorpay signature
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_SECRET)
       .update(orderId + "|" + paymentId)
@@ -111,7 +111,7 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // update subscription
+    // Activate subscription
     const subscription = await Subscription.findOneAndUpdate(
       { orderId, status: "pending" },
       { $set: { status: "active", paymentId } },
@@ -125,11 +125,21 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // set start & expiry
-    subscription.startDate = new Date();
-    subscription.endDate = new Date(
-      Date.now() + subscription.duration * 24 * 60 * 60 * 1000
+    if (!subscription.duration) {
+      return res.status(500).json({
+        success: false,
+        message: "Subscription duration missing"
+      });
+    }
+
+    // Set start & expiry
+    const startDate = new Date();
+    const endDate = new Date(
+      startDate.getTime() + subscription.duration * 24 * 60 * 60 * 1000
     );
+
+    subscription.startDate = startDate;
+    subscription.endDate = endDate;
 
     await subscription.save();
 
@@ -146,7 +156,6 @@ exports.verifyPayment = async (req, res) => {
     });
   }
 };
-
 
 
 /* ================= MY SUBSCRIPTION ================= */
@@ -167,7 +176,7 @@ exports.mySubscription = async (req, res) => {
       });
     }
 
-    // check expiry
+    // Expiry check
     if (sub.endDate && sub.endDate < new Date()) {
       sub.status = "expired";
       await sub.save();
@@ -179,6 +188,7 @@ exports.mySubscription = async (req, res) => {
     }
 
     res.json({
+      success: true,
       active: true,
       subscription: sub
     });
