@@ -1,7 +1,7 @@
 const Schedule = require("../models/scheduleModel");
 
-
 /* ================= HELPER ================= */
+
 function parseSections(body, files = []) {
 
   let sections = [];
@@ -12,7 +12,7 @@ function parseSections(body, files = []) {
         typeof body.sections === "string"
           ? JSON.parse(body.sections)
           : body.sections;
-    } catch {
+    } catch (err) {
       throw new Error("Invalid sections JSON");
     }
   }
@@ -24,21 +24,25 @@ function parseSections(body, files = []) {
     if (parts.length !== 3) return;
 
     const field = parts[0];
-    const sIdx = Number(parts[1].replace("s", ""));
-    const mIdx = Number(parts[2].replace("m", ""));
+    const sIdx = parseInt(parts[1].replace("s", ""));
+    const mIdx = parseInt(parts[2].replace("m", ""));
 
-    if (!sections[sIdx] || !sections[sIdx].matches || !sections[sIdx].matches[mIdx]) return;
+    if (!sections[sIdx]) return;
+    if (!sections[sIdx].matches) return;
+    if (!sections[sIdx].matches[mIdx]) return;
+
+    const imageUrl = file.path;
 
     if (field === "team1Logo") {
-      sections[sIdx].matches[mIdx].team1Logo = file.path;
+      sections[sIdx].matches[mIdx].team1Logo = imageUrl;
     }
 
     if (field === "team2Logo") {
-      sections[sIdx].matches[mIdx].team2Logo = file.path;
+      sections[sIdx].matches[mIdx].team2Logo = imageUrl;
     }
 
     if (field === "bannerImage") {
-      sections[sIdx].matches[mIdx].bannerImage = file.path;
+      sections[sIdx].matches[mIdx].bannerImage = imageUrl;
     }
 
   });
@@ -48,7 +52,9 @@ function parseSections(body, files = []) {
 
 
 /* ================= ADD SCHEDULE ================= */
+
 exports.addSchedule = async (req, res) => {
+
   try {
 
     const { category, leagueName } = req.body;
@@ -56,7 +62,7 @@ exports.addSchedule = async (req, res) => {
     if (!category || !leagueName) {
       return res.status(400).json({
         success: false,
-        message: "category and leagueName are required"
+        message: "category and leagueName required"
       });
     }
 
@@ -71,7 +77,9 @@ exports.addSchedule = async (req, res) => {
     if (logoFile) leagueLogo = logoFile.path;
     if (bannerFile) bannerImage = bannerFile.path;
 
-    const sections = parseSections(req.body, files);
+    const sections = req.body.sections
+      ? parseSections(req.body, files)
+      : [];
 
     const schedule = await Schedule.create({
       category,
@@ -83,7 +91,7 @@ exports.addSchedule = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Schedule added successfully",
+      message: "Schedule created successfully",
       data: schedule
     });
 
@@ -95,11 +103,14 @@ exports.addSchedule = async (req, res) => {
     });
 
   }
+
 };
 
 
-/* ================= GET ALL SCHEDULE ================= */
+/* ================= GET ALL ================= */
+
 exports.getSchedule = async (req, res) => {
+
   try {
 
     const filter = {};
@@ -127,11 +138,14 @@ exports.getSchedule = async (req, res) => {
     });
 
   }
+
 };
 
 
-/* ================= GET SCHEDULE BY CATEGORY ================= */
+/* ================= GET BY CATEGORY ================= */
+
 exports.getScheduleByCategory = async (req, res) => {
+
   try {
 
     const schedules = await Schedule
@@ -153,11 +167,14 @@ exports.getScheduleByCategory = async (req, res) => {
     });
 
   }
+
 };
 
 
 /* ================= GET SINGLE ================= */
+
 exports.getSingleSchedule = async (req, res) => {
+
   try {
 
     const schedule = await Schedule
@@ -184,11 +201,14 @@ exports.getSingleSchedule = async (req, res) => {
     });
 
   }
+
 };
 
 
 /* ================= UPDATE ================= */
+
 exports.updateSchedule = async (req, res) => {
+
   try {
 
     const schedule = await Schedule.findById(req.params.id);
@@ -231,11 +251,14 @@ exports.updateSchedule = async (req, res) => {
     });
 
   }
+
 };
 
 
 /* ================= DELETE ================= */
+
 exports.deleteSchedule = async (req, res) => {
+
   try {
 
     const deleted = await Schedule.findByIdAndDelete(req.params.id);
@@ -260,4 +283,5 @@ exports.deleteSchedule = async (req, res) => {
     });
 
   }
+
 };
