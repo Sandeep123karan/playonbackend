@@ -49,6 +49,10 @@ const liveTvSchema = new mongoose.Schema({
     type: Boolean,
     default: false   // premium channels future use
   },
+  requiredPlan: {
+    type: String,
+    default: null
+  },
 
   order: {
     type: Number,
