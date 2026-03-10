@@ -12,7 +12,7 @@ router.delete("/admin/delete/:id", protectAdmin, adminOnly, tv.deleteLiveTV);
 router.patch("/admin/toggle/:id", protectAdmin, adminOnly, tv.toggleLiveTV);
 
 /* ===== USER ===== */
-router.get("/all", tv.getAllLiveTV);
+router.get("/all", protectUser, tv.getAllLiveTV);
 router.get("/category/:category", tv.getByCategory);
 // router.get("/:id", tv.getSingleTV);
 router.patch("/viewer/:id", tv.increaseViewer);
