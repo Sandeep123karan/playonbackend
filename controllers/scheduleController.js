@@ -1,49 +1,15 @@
 const Schedule = require("../models/scheduleModel");
 
 /* ================= HELPER ================= */
-// function parseSections(body, files = []) {
-
-//   let sections = [];
-
-//   if (body.sections) {
-//     try {
-//       sections = JSON.parse(body.sections);
-//     } catch {
-//       throw new Error("Invalid sections JSON");
-//     }
-//   }
-
-//   for (const file of files) {
-
-//     const m1 = file.fieldname.match(/^team1Logo_s(\d+)_m(\d+)$/);
-//     const m2 = file.fieldname.match(/^team2Logo_s(\d+)_m(\d+)$/);
-//      const m3 = file.fieldname.match(/^bannerImage_s(\d+)_m(\d+)$/);
-
-//     if (m1) {
-//       const [, sIdx, mIdx] = m1.map(Number);
-//       if (sections[sIdx]?.matches?.[mIdx]) {
-//         sections[sIdx].matches[mIdx].team1Logo = file.path;
-//       }
-//     }
-
-//     if (m2) {
-//       const [, sIdx, mIdx] = m2.map(Number);
-//       if (sections[sIdx]?.matches?.[mIdx]) {
-//         sections[sIdx].matches[mIdx].team2Logo = file.path;
-//       }
-//     }
-
-//   }
-
-//   return sections;
-// }
 function parseSections(body, files = []) {
 
   let sections = [];
 
   if (body.sections) {
     try {
-      sections = JSON.parse(body.sections);
+      sections = typeof body.sections === "string"
+        ? JSON.parse(body.sections)
+        : body.sections;
     } catch {
       throw new Error("Invalid sections JSON");
     }
@@ -51,28 +17,34 @@ function parseSections(body, files = []) {
 
   for (const file of files) {
 
-    const m1 = file.fieldname.match(/^team1Logo_s(\d+)_m(\d+)$/);
-    const m2 = file.fieldname.match(/^team2Logo_s(\d+)_m(\d+)$/);
-    const m3 = file.fieldname.match(/^bannerImage_s(\d+)_m(\d+)$/); // 👈 new
+    const team1 = file.fieldname.match(/^team1Logo_s(\d+)_m(\d+)$/);
+    const team2 = file.fieldname.match(/^team2Logo_s(\d+)_m(\d+)$/);
+    const banner = file.fieldname.match(/^bannerImage_s(\d+)_m(\d+)$/);
 
-    if (m1) {
-      const [, sIdx, mIdx] = m1.map(Number);
-      if (sections[sIdx]?.matches?.[mIdx]) {
-        sections[sIdx].matches[mIdx].team1Logo = file.path;
+    if (team1) {
+      const s = Number(team1[1]);
+      const m = Number(team1[2]);
+
+      if (sections[s]?.matches?.[m]) {
+        sections[s].matches[m].team1Logo = file.path;
       }
     }
 
-    if (m2) {
-      const [, sIdx, mIdx] = m2.map(Number);
-      if (sections[sIdx]?.matches?.[mIdx]) {
-        sections[sIdx].matches[mIdx].team2Logo = file.path;
+    if (team2) {
+      const s = Number(team2[1]);
+      const m = Number(team2[2]);
+
+      if (sections[s]?.matches?.[m]) {
+        sections[s].matches[m].team2Logo = file.path;
       }
     }
 
-    if (m3) {
-      const [, sIdx, mIdx] = m3.map(Number);
-      if (sections[sIdx]?.matches?.[mIdx]) {
-        sections[sIdx].matches[mIdx].bannerImage = file.path;
+    if (banner) {
+      const s = Number(banner[1]);
+      const m = Number(banner[2]);
+
+      if (sections[s]?.matches?.[m]) {
+        sections[s].matches[m].bannerImage = file.path;
       }
     }
 
@@ -80,7 +52,6 @@ function parseSections(body, files = []) {
 
   return sections;
 }
-
 
 /* ================= ADD SCHEDULE ================= */
 exports.addSchedule = async (req, res) => {
@@ -114,17 +85,14 @@ exports.addSchedule = async (req, res) => {
     });
 
   } catch (error) {
-
     res.status(500).json({
       success: false,
       message: error.message
     });
-
   }
 };
 
-
-/* ================= GET ALL SCHEDULE ================= */
+/* ================= GET ALL ================= */
 exports.getSchedule = async (req, res) => {
   try {
 
@@ -134,37 +102,34 @@ exports.getSchedule = async (req, res) => {
       filter.category = req.query.category;
     }
 
-    const data = await Schedule
+    const schedules = await Schedule
       .find(filter)
       .populate("category", "title icon")
       .sort({ createdAt: -1 });
 
     res.json({
       success: true,
-      total: data.length,
-      data
+      total: schedules.length,
+      data: schedules
     });
 
   } catch (error) {
-
     res.status(500).json({
       success: false,
       message: error.message
     });
-
   }
 };
-
 
 /* ================= GET SINGLE ================= */
 exports.getSingleSchedule = async (req, res) => {
   try {
 
-    const data = await Schedule
+    const schedule = await Schedule
       .findById(req.params.id)
       .populate("category", "title icon");
 
-    if (!data) {
+    if (!schedule) {
       return res.status(404).json({
         success: false,
         message: "Schedule not found"
@@ -173,21 +138,18 @@ exports.getSingleSchedule = async (req, res) => {
 
     res.json({
       success: true,
-      data
+      data: schedule
     });
 
   } catch (error) {
-
     res.status(500).json({
       success: false,
       message: error.message
     });
-
   }
 };
 
-
-/* ================= UPDATE SCHEDULE ================= */
+/* ================= UPDATE ================= */
 exports.updateSchedule = async (req, res) => {
   try {
 
@@ -229,17 +191,14 @@ exports.updateSchedule = async (req, res) => {
     });
 
   } catch (error) {
-
     res.status(500).json({
       success: false,
       message: error.message
     });
-
   }
 };
 
-
-/* ================= DELETE SCHEDULE ================= */
+/* ================= DELETE ================= */
 exports.deleteSchedule = async (req, res) => {
   try {
 
@@ -258,11 +217,9 @@ exports.deleteSchedule = async (req, res) => {
     });
 
   } catch (error) {
-
     res.status(500).json({
       success: false,
       message: error.message
     });
-
   }
 };
