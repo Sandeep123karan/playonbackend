@@ -1,5 +1,6 @@
 const Schedule = require("../models/scheduleModel");
 
+
 /* ================= HELPER ================= */
 function parseSections(body, files = []) {
 
@@ -7,60 +8,62 @@ function parseSections(body, files = []) {
 
   if (body.sections) {
     try {
-      sections = typeof body.sections === "string"
-        ? JSON.parse(body.sections)
-        : body.sections;
+      sections =
+        typeof body.sections === "string"
+          ? JSON.parse(body.sections)
+          : body.sections;
     } catch {
       throw new Error("Invalid sections JSON");
     }
   }
 
-  for (const file of files) {
+  files.forEach(file => {
 
-    const team1 = file.fieldname.match(/^team1Logo_s(\d+)_m(\d+)$/);
-    const team2 = file.fieldname.match(/^team2Logo_s(\d+)_m(\d+)$/);
-    const banner = file.fieldname.match(/^bannerImage_s(\d+)_m(\d+)$/);
+    const parts = file.fieldname.split("_");
 
-    if (team1) {
-      const s = Number(team1[1]);
-      const m = Number(team1[2]);
+    if (parts.length !== 3) return;
 
-      if (sections[s]?.matches?.[m]) {
-        sections[s].matches[m].team1Logo = file.path;
-      }
+    const field = parts[0];
+    const sIdx = Number(parts[1].replace("s", ""));
+    const mIdx = Number(parts[2].replace("m", ""));
+
+    if (!sections[sIdx] || !sections[sIdx].matches || !sections[sIdx].matches[mIdx]) return;
+
+    if (field === "team1Logo") {
+      sections[sIdx].matches[mIdx].team1Logo = file.path;
     }
 
-    if (team2) {
-      const s = Number(team2[1]);
-      const m = Number(team2[2]);
-
-      if (sections[s]?.matches?.[m]) {
-        sections[s].matches[m].team2Logo = file.path;
-      }
+    if (field === "team2Logo") {
+      sections[sIdx].matches[mIdx].team2Logo = file.path;
     }
 
-    if (banner) {
-      const s = Number(banner[1]);
-      const m = Number(banner[2]);
-
-      if (sections[s]?.matches?.[m]) {
-        sections[s].matches[m].bannerImage = file.path;
-      }
+    if (field === "bannerImage") {
+      sections[sIdx].matches[mIdx].bannerImage = file.path;
     }
 
-  }
+  });
 
   return sections;
 }
+
 
 /* ================= ADD SCHEDULE ================= */
 exports.addSchedule = async (req, res) => {
   try {
 
+    const { category, leagueName } = req.body;
+
+    if (!category || !leagueName) {
+      return res.status(400).json({
+        success: false,
+        message: "category and leagueName are required"
+      });
+    }
+
     const files = req.files || [];
 
-    let leagueLogo = req.body.leagueLogo || "";
-    let bannerImage = req.body.bannerImage || "";
+    let leagueLogo = "";
+    let bannerImage = "";
 
     const logoFile = files.find(f => f.fieldname === "leagueLogo");
     const bannerFile = files.find(f => f.fieldname === "bannerImage");
@@ -71,8 +74,8 @@ exports.addSchedule = async (req, res) => {
     const sections = parseSections(req.body, files);
 
     const schedule = await Schedule.create({
-      category: req.body.category,
-      leagueName: req.body.leagueName,
+      category,
+      leagueName,
       leagueLogo,
       bannerImage,
       sections
@@ -85,14 +88,17 @@ exports.addSchedule = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
       message: error.message
     });
+
   }
 };
 
-/* ================= GET ALL ================= */
+
+/* ================= GET ALL SCHEDULE ================= */
 exports.getSchedule = async (req, res) => {
   try {
 
@@ -114,12 +120,41 @@ exports.getSchedule = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
       message: error.message
     });
+
   }
 };
+
+
+/* ================= GET SCHEDULE BY CATEGORY ================= */
+exports.getScheduleByCategory = async (req, res) => {
+  try {
+
+    const schedules = await Schedule
+      .find({ category: req.params.categoryId })
+      .populate("category", "title icon")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      total: schedules.length,
+      data: schedules
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
+  }
+};
+
 
 /* ================= GET SINGLE ================= */
 exports.getSingleSchedule = async (req, res) => {
@@ -142,12 +177,15 @@ exports.getSingleSchedule = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
       message: error.message
     });
+
   }
 };
+
 
 /* ================= UPDATE ================= */
 exports.updateSchedule = async (req, res) => {
@@ -164,13 +202,8 @@ exports.updateSchedule = async (req, res) => {
 
     const files = req.files || [];
 
-    if (req.body.category) {
-      schedule.category = req.body.category;
-    }
-
-    if (req.body.leagueName) {
-      schedule.leagueName = req.body.leagueName;
-    }
+    if (req.body.category) schedule.category = req.body.category;
+    if (req.body.leagueName) schedule.leagueName = req.body.leagueName;
 
     const logoFile = files.find(f => f.fieldname === "leagueLogo");
     const bannerFile = files.find(f => f.fieldname === "bannerImage");
@@ -191,12 +224,15 @@ exports.updateSchedule = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
       message: error.message
     });
+
   }
 };
+
 
 /* ================= DELETE ================= */
 exports.deleteSchedule = async (req, res) => {
@@ -217,9 +253,11 @@ exports.deleteSchedule = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
       message: error.message
     });
+
   }
 };
