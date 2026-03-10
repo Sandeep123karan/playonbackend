@@ -1,6 +1,42 @@
 const Schedule = require("../models/scheduleModel");
 
 /* ================= HELPER ================= */
+// function parseSections(body, files = []) {
+
+//   let sections = [];
+
+//   if (body.sections) {
+//     try {
+//       sections = JSON.parse(body.sections);
+//     } catch {
+//       throw new Error("Invalid sections JSON");
+//     }
+//   }
+
+//   for (const file of files) {
+
+//     const m1 = file.fieldname.match(/^team1Logo_s(\d+)_m(\d+)$/);
+//     const m2 = file.fieldname.match(/^team2Logo_s(\d+)_m(\d+)$/);
+//      const m3 = file.fieldname.match(/^bannerImage_s(\d+)_m(\d+)$/);
+
+//     if (m1) {
+//       const [, sIdx, mIdx] = m1.map(Number);
+//       if (sections[sIdx]?.matches?.[mIdx]) {
+//         sections[sIdx].matches[mIdx].team1Logo = file.path;
+//       }
+//     }
+
+//     if (m2) {
+//       const [, sIdx, mIdx] = m2.map(Number);
+//       if (sections[sIdx]?.matches?.[mIdx]) {
+//         sections[sIdx].matches[mIdx].team2Logo = file.path;
+//       }
+//     }
+
+//   }
+
+//   return sections;
+// }
 function parseSections(body, files = []) {
 
   let sections = [];
@@ -17,6 +53,7 @@ function parseSections(body, files = []) {
 
     const m1 = file.fieldname.match(/^team1Logo_s(\d+)_m(\d+)$/);
     const m2 = file.fieldname.match(/^team2Logo_s(\d+)_m(\d+)$/);
+    const m3 = file.fieldname.match(/^bannerImage_s(\d+)_m(\d+)$/); // 👈 new
 
     if (m1) {
       const [, sIdx, mIdx] = m1.map(Number);
@@ -29,6 +66,13 @@ function parseSections(body, files = []) {
       const [, sIdx, mIdx] = m2.map(Number);
       if (sections[sIdx]?.matches?.[mIdx]) {
         sections[sIdx].matches[mIdx].team2Logo = file.path;
+      }
+    }
+
+    if (m3) {
+      const [, sIdx, mIdx] = m3.map(Number);
+      if (sections[sIdx]?.matches?.[mIdx]) {
+        sections[sIdx].matches[mIdx].bannerImage = file.path;
       }
     }
 
