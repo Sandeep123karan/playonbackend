@@ -12,29 +12,30 @@ exports.addMatch = async (req, res) => {
     const {
       tournamentId,
       title,
-      imageUrl,
       matchType,
       videoUrl,
       league,
       team1,
       team2,
-      team1Logo,
-      team2Logo,
       matchDate,
       matchTime,
       venue,
       isLive
     } = req.body;
 
-    // Required validation
-    if (!tournamentId || !title || !imageUrl || !team1 || !team2) {
+    // uploaded images from cloudinary
+    const imageUrl = req.files?.imageUrl?.[0]?.path || "";
+    const team1Logo = req.files?.team1Logo?.[0]?.path || "";
+    const team2Logo = req.files?.team2Logo?.[0]?.path || "";
+
+    // validation
+    if (!tournamentId || !title || !team1 || !team2) {
       return res.status(400).json({
         success: false,
-        message: "tournamentId, title, imageUrl, team1, team2 are required"
+        message: "tournamentId, title, team1, team2 are required"
       });
     }
 
-    // ObjectId validation
     if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
       return res.status(400).json({
         success: false,
@@ -85,7 +86,6 @@ exports.getAllMatches = async (req, res) => {
   try {
 
     const matches = await MatchCard
-      // .find()
       .find({ tournamentId: { $ne: null } })
       .populate("tournamentId", "title")
       .sort({ matchDate: 1 });
@@ -206,11 +206,7 @@ exports.updateMatch = async (req, res) => {
       });
     }
 
-    const match = await MatchCard.findByIdAndUpdate(
-      id,
-      req.body,
-      { new: true }
-    );
+    const match = await MatchCard.findById(id);
 
     if (!match) {
       return res.status(404).json({
@@ -218,6 +214,24 @@ exports.updateMatch = async (req, res) => {
         message: "Match not found"
       });
     }
+
+    // update fields
+    Object.assign(match, req.body);
+
+    // update images if uploaded
+    if (req.files?.imageUrl) {
+      match.imageUrl = req.files.imageUrl[0].path;
+    }
+
+    if (req.files?.team1Logo) {
+      match.team1Logo = req.files.team1Logo[0].path;
+    }
+
+    if (req.files?.team2Logo) {
+      match.team2Logo = req.files.team2Logo[0].path;
+    }
+
+    await match.save();
 
     res.status(200).json({
       success: true,
