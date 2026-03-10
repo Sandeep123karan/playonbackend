@@ -1,5 +1,3 @@
-
-
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const mongoose = require("mongoose");
@@ -9,71 +7,29 @@ const Subscription = require("../models/Subscription");
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_SECRET  // ✅ fixed
+  key_secret: process.env.RAZORPAY_SECRET
 });
 
 
-// ================= CREATE ORDER =================
-// exports.createOrder = async (req, res) => {
-//   try {
-//     const { planId } = req.body;
 
-//     if (!planId) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "planId required"
-//       });
-//     }
-
-//     if (!mongoose.Types.ObjectId.isValid(planId)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid planId"
-//       });
-//     }
-
-//     const plan = await Plan.findById(planId);
-
-//     if (!plan) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Plan not found"
-//       });
-//     }
-
-//     const order = await razorpay.orders.create({
-//       amount: plan.price * 100,
-//       currency: "INR",
-//       receipt: "receipt_" + Date.now()
-//     });
-
-//     await Subscription.create({
-//       user: req.user.id,
-//       plan: plan._id,
-//       orderId: order.id,
-//       amount: plan.price,
-//       status: "pending"
-//     });
-
-//     res.json({
-//       success: true,
-//       orderId: order.id,
-//       amount: plan.price,
-//       key: process.env.RAZORPAY_KEY_ID
-//     });
-
-//   } catch (error) {
-//     console.log("CREATE ORDER ERROR:", error);
-//     res.status(500).json({
-//       success: false,
-//       message: error.message
-//     });
-//   }
-// };
+/* ================= CREATE ORDER ================= */
 exports.createOrder = async (req, res) => {
   try {
-
     const { planId, optionId } = req.body;
+
+    if (!planId || !optionId) {
+      return res.status(400).json({
+        success: false,
+        message: "planId and optionId required"
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(planId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid planId"
+      });
+    }
 
     const plan = await Plan.findById(planId);
 
@@ -93,15 +49,19 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    // create razorpay order
     const order = await razorpay.orders.create({
       amount: option.price * 100,
       currency: "INR",
       receipt: "receipt_" + Date.now()
     });
 
+    // create pending subscription
     await Subscription.create({
       user: req.user.id,
       plan: plan._id,
+      optionId: option._id,
+      duration: option.duration,
       orderId: order.id,
       amount: option.price,
       status: "pending"
@@ -111,10 +71,12 @@ exports.createOrder = async (req, res) => {
       success: true,
       orderId: order.id,
       amount: option.price,
+      currency: "INR",
       key: process.env.RAZORPAY_KEY_ID
     });
 
   } catch (error) {
+    console.log("CREATE ORDER ERROR:", error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -123,7 +85,8 @@ exports.createOrder = async (req, res) => {
 };
 
 
-// ================= VERIFY PAYMENT =================
+
+/* ================= VERIFY PAYMENT ================= */
 exports.verifyPayment = async (req, res) => {
   try {
     const { orderId, paymentId, signature } = req.body;
@@ -135,9 +98,9 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // verify signature
+    // verify razorpay signature
     const generatedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_SECRET)  // ✅ fixed
+      .createHmac("sha256", process.env.RAZORPAY_SECRET)
       .update(orderId + "|" + paymentId)
       .digest("hex");
 
@@ -148,12 +111,12 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // prevent duplicate activation
+    // update subscription
     const subscription = await Subscription.findOneAndUpdate(
-      { orderId, status: "pending" },  // ✅ only pending subscription update hogi
+      { orderId, status: "pending" },
       { $set: { status: "active", paymentId } },
       { new: true }
-    ).populate("plan");
+    );
 
     if (!subscription) {
       return res.status(404).json({
@@ -162,17 +125,12 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    if (!subscription.plan?.duration) {
-      return res.status(500).json({
-        success: false,
-        message: "Plan duration not configured"
-      });
-    }
-
+    // set start & expiry
     subscription.startDate = new Date();
     subscription.endDate = new Date(
-      Date.now() + subscription.plan.duration * 24 * 60 * 60 * 1000
+      Date.now() + subscription.duration * 24 * 60 * 60 * 1000
     );
+
     await subscription.save();
 
     res.json({
@@ -190,15 +148,17 @@ exports.verifyPayment = async (req, res) => {
 };
 
 
-// ================= MY SUBSCRIPTION =================
+
+/* ================= MY SUBSCRIPTION ================= */
 exports.mySubscription = async (req, res) => {
   try {
+
     const sub = await Subscription.findOne({
       user: req.user.id,
       status: "active"
     })
-    .sort({ createdAt: -1 })  // ✅ latest subscription
-    .populate("plan");
+      .sort({ createdAt: -1 })
+      .populate("plan");
 
     if (!sub) {
       return res.json({
@@ -207,7 +167,8 @@ exports.mySubscription = async (req, res) => {
       });
     }
 
-    if (sub.endDate < new Date()) {
+    // check expiry
+    if (sub.endDate && sub.endDate < new Date()) {
       sub.status = "expired";
       await sub.save();
 
