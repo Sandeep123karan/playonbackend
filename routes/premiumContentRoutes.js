@@ -1,55 +1,51 @@
-const router = require("express").Router();
+const express = require("express");
+const router = express.Router();
+
 const premiumCtrl = require("../controllers/premiumContentController");
-
-const {
-  protectAdmin,
-  adminOnly,
-} = require("../middleware/authMiddleware");
-
-const upload = require("../middleware/upload"); // 👈 important
+const { protectAdmin, adminOnly } = require("../middleware/authMiddleware");
+const upload = require("../middleware/upload");
 
 
 /* ===============================
-   ADD PREMIUM CONTENT
+   PUBLIC ROUTES
 ================================ */
+
+// Get all premium content
+router.get("/", premiumCtrl.getAllPremiumContent);
+
+// Get premium content by category
+router.get("/category/:categoryId", premiumCtrl.getPremiumContentByCategory);
+
+// Get single premium content
+router.get("/:id", premiumCtrl.getPremiumContentById);
+
+
+
+/* ===============================
+   ADMIN ROUTES
+================================ */
+
+// Add premium content
 router.post(
   "/add",
   protectAdmin,
   adminOnly,
-  upload.single("image"),   // 👈 image upload
+  upload.single("image"),
   premiumCtrl.addPremiumContent
 );
 
-
-/* ===============================
-   GET ALL PREMIUM CONTENT
-================================ */
-router.get("/", premiumCtrl.getAllPremiumContent);
-
-
-/* ===============================
-   GET SINGLE PREMIUM CONTENT
-================================ */
-router.get("/:id", premiumCtrl.getPremiumContentById);
-
-
-/* ===============================
-   UPDATE PREMIUM CONTENT
-================================ */
+// Update premium content
 router.put(
-  "/:id",
+  "/update/:id",
   protectAdmin,
   adminOnly,
-  upload.single("image"),   // 👈 image update
+  upload.single("image"),
   premiumCtrl.updatePremiumContent
 );
 
-
-/* ===============================
-   DELETE PREMIUM CONTENT
-================================ */
+// Delete premium content
 router.delete(
-  "/:id",
+  "/delete/:id",
   protectAdmin,
   adminOnly,
   premiumCtrl.deletePremiumContent
