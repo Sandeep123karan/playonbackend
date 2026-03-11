@@ -1,7 +1,15 @@
+
+
 const mongoose = require("mongoose");
 
 const highlightCategorySchema = new mongoose.Schema(
 {
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Category",
+    required: true
+  },
+
   title: {
     type: String,
     required: true,
@@ -20,9 +28,9 @@ const highlightCategorySchema = new mongoose.Schema(
   }
 
 },
-{
-  timestamps: true
-}
+{ timestamps: true }
 );
 
-module.exports = mongoose.model("HighlightCategory", highlightCategorySchema);
+module.exports =
+  mongoose.models.HighlightCategory ||
+  mongoose.model("HighlightCategory", highlightCategorySchema);
