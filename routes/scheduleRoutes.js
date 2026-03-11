@@ -5,19 +5,34 @@ const scheduleCtrl = require("../controllers/scheduleController");
 const { protectAdmin } = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload");
 
-/* ================= ADMIN ================= */
 
-// add schedule
-router.post("/add", protectAdmin, upload.any(), scheduleCtrl.addSchedule);
+/* ================= ADMIN ROUTES ================= */
+
+// add schedule (with images)
+router.post(
+  "/add",
+  protectAdmin,
+  upload.any(),
+  scheduleCtrl.addSchedule
+);
 
 // update schedule
-router.put("/update/:id", protectAdmin, upload.any(), scheduleCtrl.updateSchedule);
+router.put(
+  "/update/:id",
+  protectAdmin,
+  upload.any(),
+  scheduleCtrl.updateSchedule
+);
 
 // delete schedule
-router.delete("/delete/:id", protectAdmin, scheduleCtrl.deleteSchedule);
+router.delete(
+  "/delete/:id",
+  protectAdmin,
+  scheduleCtrl.deleteSchedule
+);
 
 
-/* ================= PUBLIC ================= */
+/* ================= PUBLIC ROUTES ================= */
 
 // get all schedules
 router.get("/all", scheduleCtrl.getSchedule);
@@ -27,5 +42,6 @@ router.get("/category/:categoryId", scheduleCtrl.getScheduleByCategory);
 
 // get single schedule
 router.get("/single/:id", scheduleCtrl.getSingleSchedule);
+
 
 module.exports = router;
