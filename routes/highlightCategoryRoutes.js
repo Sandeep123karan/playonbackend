@@ -1,43 +1,101 @@
+// const router = require("express").Router();
+
+// const highlightCategoryController = require("../controllers/highlightCategoryController");
+
+// const { protectAdmin, adminOnly } = require("../middleware/authMiddleware");
+
+// /* ================= ADD CATEGORY (ADMIN) ================= */
+// router.post(
+//   "/add",
+//   protectAdmin,
+//   adminOnly,
+//   highlightCategoryController.addHighlightCategory
+// );
+
+// /* ================= GET ALL (PUBLIC) ================= */
+// router.get(
+//   "/",
+//   highlightCategoryController.getHighlightCategories
+// );
+
+// /* ================= GET SINGLE (PUBLIC) ================= */
+// router.get(
+//   "/:id",
+//   highlightCategoryController.getSingleHighlightCategory
+// );
+
+// /* ================= UPDATE (ADMIN) ================= */
+// router.put(
+//   "/:id",
+//   protectAdmin,
+//   adminOnly,
+//   highlightCategoryController.updateHighlightCategory
+// );
+
+// /* ================= DELETE (ADMIN) ================= */
+// router.delete(
+//   "/:id",
+//   protectAdmin,
+//   adminOnly,
+//   highlightCategoryController.deleteHighlightCategory
+// );
+
+// module.exports = router;
+
+
+
+
 const router = require("express").Router();
 
 const highlightCategoryController = require("../controllers/highlightCategoryController");
-
 const { protectAdmin, adminOnly } = require("../middleware/authMiddleware");
 
-/* ================= ADD CATEGORY (ADMIN) ================= */
+
+/* ================= ADMIN ================= */
+
+// Add highlight category
 router.post(
   "/add",
   protectAdmin,
   adminOnly,
   highlightCategoryController.addHighlightCategory
 );
-
-/* ================= GET ALL (PUBLIC) ================= */
+// Get highlight categories by category id
 router.get(
-  "/",
-  highlightCategoryController.getHighlightCategories
+  "/category/:categoryId",
+  highlightCategoryController.getHighlightCategoryByCategory
 );
 
-/* ================= GET SINGLE (PUBLIC) ================= */
-router.get(
-  "/:id",
-  highlightCategoryController.getSingleHighlightCategory
-);
-
-/* ================= UPDATE (ADMIN) ================= */
+// Update highlight category
 router.put(
-  "/:id",
+  "/update/:id",
   protectAdmin,
   adminOnly,
   highlightCategoryController.updateHighlightCategory
 );
 
-/* ================= DELETE (ADMIN) ================= */
+// Delete highlight category
 router.delete(
-  "/:id",
+  "/delete/:id",
   protectAdmin,
   adminOnly,
   highlightCategoryController.deleteHighlightCategory
 );
+
+
+/* ================= PUBLIC ================= */
+
+// Get all highlight categories
+router.get(
+  "/",
+  highlightCategoryController.getHighlightCategories
+);
+
+// Get single highlight category
+router.get(
+  "/:id",
+  highlightCategoryController.getSingleHighlightCategory
+);
+
 
 module.exports = router;
