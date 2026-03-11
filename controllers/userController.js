@@ -60,9 +60,9 @@ const loginUser = async (req, res) => {
 
     const { email, password, fcmToken } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || !fcmToken) {
       return res.status(400).json({
-        message: "Email and password required"
+        message: "Email , password and fcmToken are  required"
       });
     }
 
