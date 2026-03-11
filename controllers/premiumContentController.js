@@ -1,4 +1,6 @@
+
 const PremiumContent = require("../models/premiumContentModel");
+const Category = require("../models/Category");
 
 
 /* ===============================
@@ -7,14 +9,25 @@ const PremiumContent = require("../models/premiumContentModel");
 exports.addPremiumContent = async (req, res) => {
   try {
 
-    const { title, category, amount, discount, videoUrl, features } = req.body;
+    const { title, category, amount, discount, videoUrl, features, imagePath } = req.body;
 
-    const imagePath = req.file ? req.file.path : "";
+    // image from file OR json
+    const image = req.file?.path || imagePath;
 
-    if (!title || !imagePath || !amount || !discount) {
+    if (!title || !category || !image || !amount || !discount) {
       return res.status(400).json({
         success: false,
-        message: "Title, image, amount and discount are required",
+        message: "Title, category, image, amount and discount are required"
+      });
+    }
+
+    // check category exist
+    const categoryExist = await Category.findById(category);
+
+    if (!categoryExist) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found"
       });
     }
 
@@ -27,24 +40,24 @@ exports.addPremiumContent = async (req, res) => {
     if (parsedFeatures && !Array.isArray(parsedFeatures)) {
       return res.status(400).json({
         success: false,
-        message: "Features must be an array",
+        message: "Features must be an array"
       });
     }
 
     const premiumContent = await PremiumContent.create({
       title,
-      imagePath,
+      imagePath: image,
       category,
       amount,
       discount,
       videoUrl,
-      features: parsedFeatures,
+      features: parsedFeatures
     });
 
     res.status(201).json({
       success: true,
       message: "Premium content added successfully",
-      data: premiumContent,
+      data: premiumContent
     });
 
   } catch (error) {
@@ -53,7 +66,7 @@ exports.addPremiumContent = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Server error"
     });
 
   }
@@ -69,12 +82,13 @@ exports.getAllPremiumContent = async (req, res) => {
 
     const contents = await PremiumContent
       .find()
+      .populate("category", "title icon")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       count: contents.length,
-      data: contents,
+      data: contents
     });
 
   } catch (error) {
@@ -83,7 +97,40 @@ exports.getAllPremiumContent = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Server error"
+    });
+
+  }
+};
+
+
+
+/* ===============================
+   GET PREMIUM CONTENT BY CATEGORY
+================================ */
+exports.getPremiumContentByCategory = async (req, res) => {
+  try {
+
+    const { categoryId } = req.params;
+
+    const contents = await PremiumContent
+      .find({ category: categoryId })
+      .populate("category", "title icon")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: contents.length,
+      data: contents
+    });
+
+  } catch (error) {
+
+    console.error("Get Premium Content By Category Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error"
     });
 
   }
@@ -99,18 +146,20 @@ exports.getPremiumContentById = async (req, res) => {
 
     const { id } = req.params;
 
-    const content = await PremiumContent.findById(id);
+    const content = await PremiumContent
+      .findById(id)
+      .populate("category", "title icon");
 
     if (!content) {
       return res.status(404).json({
         success: false,
-        message: "Premium content not found",
+        message: "Premium content not found"
       });
     }
 
     res.status(200).json({
       success: true,
-      data: content,
+      data: content
     });
 
   } catch (error) {
@@ -119,7 +168,7 @@ exports.getPremiumContentById = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Server error"
     });
 
   }
@@ -140,7 +189,7 @@ exports.updatePremiumContent = async (req, res) => {
     if (!content) {
       return res.status(404).json({
         success: false,
-        message: "Premium content not found",
+        message: "Premium content not found"
       });
     }
 
@@ -157,14 +206,14 @@ exports.updatePremiumContent = async (req, res) => {
       req.body,
       {
         new: true,
-        runValidators: true,
+        runValidators: true
       }
     );
 
     res.status(200).json({
       success: true,
       message: "Premium content updated successfully",
-      data: updatedContent,
+      data: updatedContent
     });
 
   } catch (error) {
@@ -173,7 +222,7 @@ exports.updatePremiumContent = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Server error"
     });
 
   }
@@ -194,7 +243,7 @@ exports.deletePremiumContent = async (req, res) => {
     if (!content) {
       return res.status(404).json({
         success: false,
-        message: "Premium content not found",
+        message: "Premium content not found"
       });
     }
 
@@ -202,7 +251,7 @@ exports.deletePremiumContent = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Premium content deleted successfully",
+      message: "Premium content deleted successfully"
     });
 
   } catch (error) {
@@ -211,7 +260,7 @@ exports.deletePremiumContent = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Server error"
     });
 
   }
