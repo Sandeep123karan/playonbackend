@@ -1,14 +1,12 @@
-
-
-
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 
 // ================= REGISTER USER =================
-exports.registerUser = async (req, res) => {
+const registerUser = async (req, res) => {
   try {
+
     const { fullName, email, password, phone, dob } = req.body;
 
     if (!fullName || !email || !password) {
@@ -18,6 +16,7 @@ exports.registerUser = async (req, res) => {
     }
 
     const exist = await User.findOne({ email });
+
     if (exist) {
       return res.status(400).json({
         message: "Email already registered"
@@ -29,8 +28,7 @@ exports.registerUser = async (req, res) => {
       email,
       password,
       phone,
-      dob,
-      role: "user"
+      dob
     });
 
     res.status(201).json({
@@ -38,24 +36,29 @@ exports.registerUser = async (req, res) => {
       user: {
         id: user._id,
         fullName: user.fullName,
-        email: user.email
+        email: user.email,
+        phone: user.phone,
+        dob: user.dob
       }
     });
 
   } catch (error) {
+
     res.status(500).json({
-      message: "Register error",
-      error: error.message
+      message: error.message
     });
+
   }
 };
 
 
 
 // ================= LOGIN USER =================
-exports.loginUser = async (req, res) => {
+const loginUser = async (req, res) => {
+
   try {
-    const { email, password } = req.body;
+
+    const { email, password, fcmToken } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -64,6 +67,7 @@ exports.loginUser = async (req, res) => {
     }
 
     const user = await User.findOne({ email });
+
     if (!user) {
       return res.status(400).json({
         message: "Invalid email or password"
@@ -71,14 +75,21 @@ exports.loginUser = async (req, res) => {
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
       return res.status(400).json({
         message: "Invalid email or password"
       });
     }
 
+    // 🔔 Save FCM token on login
+    if (fcmToken) {
+      user.fcmToken = fcmToken;
+      await user.save();
+    }
+
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      { id: user._id },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -96,22 +107,28 @@ exports.loginUser = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
-      message: "Login error",
-      error: error.message
+      message: error.message
     });
+
   }
+
 };
 
 
 
 // ================= GET PROFILE =================
-exports.getProfile = async (req, res) => {
+const getProfile = async (req, res) => {
+
   try {
+
     const user = await User.findById(req.user.id).select("-password");
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        message: "User not found"
+      });
     }
 
     res.json({
@@ -120,20 +137,30 @@ exports.getProfile = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+
+    res.status(500).json({
+      message: error.message
+    });
+
   }
+
 };
 
 
 
 // ================= UPDATE PROFILE =================
-exports.updateProfile = async (req, res) => {
+const updateProfile = async (req, res) => {
+
   try {
+
     const { fullName, phone, dob } = req.body;
 
     const user = await User.findById(req.user.id);
+
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        message: "User not found"
+      });
     }
 
     if (fullName) user.fullName = fullName;
@@ -148,11 +175,20 @@ exports.updateProfile = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+
+    res.status(500).json({
+      message: error.message
+    });
+
   }
+
 };
+
+
+
 // ================= GET ALL USERS =================
-exports.getAllUsers = async (req, res) => {
+const getAllUsers = async (req, res) => {
+
   try {
 
     const users = await User.find().select("-password");
@@ -164,8 +200,20 @@ exports.getAllUsers = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       message: error.message
     });
+
   }
+
+};
+
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getProfile,
+  updateProfile,
+  getAllUsers
 };
