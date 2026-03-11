@@ -20,7 +20,6 @@ function parseSections(body, files = []) {
   files.forEach(file => {
 
     const parts = file.fieldname.split("_");
-
     if (parts.length !== 3) return;
 
     const field = parts[0];
@@ -41,14 +40,15 @@ function parseSections(body, files = []) {
       sections[sIdx].matches[mIdx].team2Logo = imageUrl;
     }
 
-    if (field === "bannerImage") {
-      sections[sIdx].matches[mIdx].bannerImage = imageUrl;
+    if (field === "matchBanner") {
+      sections[sIdx].matches[mIdx].matchBanner = imageUrl;
     }
 
   });
 
   return sections;
 }
+
 
 
 /* ================= ADD SCHEDULE ================= */
@@ -69,23 +69,27 @@ exports.addSchedule = async (req, res) => {
     const files = req.files || [];
 
     let leagueLogo = "";
-    let bannerImage = "";
+    let leagueBanner = "";
 
-    const logoFile = files.find(f => f.fieldname === "leagueLogo");
-    const bannerFile = files.find(f => f.fieldname === "bannerImage");
+    files.forEach(file => {
 
-    if (logoFile) leagueLogo = logoFile.path;
-    if (bannerFile) bannerImage = bannerFile.path;
+      if (file.fieldname === "leagueLogo") {
+        leagueLogo = file.path;
+      }
 
-    const sections = req.body.sections
-      ? parseSections(req.body, files)
-      : [];
+      if (file.fieldname === "leagueBanner") {
+        leagueBanner = file.path;
+      }
+
+    });
+
+    const sections = parseSections(req.body, files);
 
     const schedule = await Schedule.create({
       category,
       leagueName,
       leagueLogo,
-      bannerImage,
+      leagueBanner,
       sections
     });
 
@@ -105,6 +109,7 @@ exports.addSchedule = async (req, res) => {
   }
 
 };
+
 
 
 /* ================= GET ALL ================= */
@@ -142,6 +147,7 @@ exports.getSchedule = async (req, res) => {
 };
 
 
+
 /* ================= GET BY CATEGORY ================= */
 
 exports.getScheduleByCategory = async (req, res) => {
@@ -169,6 +175,7 @@ exports.getScheduleByCategory = async (req, res) => {
   }
 
 };
+
 
 
 /* ================= GET SINGLE ================= */
@@ -205,6 +212,7 @@ exports.getSingleSchedule = async (req, res) => {
 };
 
 
+
 /* ================= UPDATE ================= */
 
 exports.updateSchedule = async (req, res) => {
@@ -225,11 +233,17 @@ exports.updateSchedule = async (req, res) => {
     if (req.body.category) schedule.category = req.body.category;
     if (req.body.leagueName) schedule.leagueName = req.body.leagueName;
 
-    const logoFile = files.find(f => f.fieldname === "leagueLogo");
-    const bannerFile = files.find(f => f.fieldname === "bannerImage");
+    files.forEach(file => {
 
-    if (logoFile) schedule.leagueLogo = logoFile.path;
-    if (bannerFile) schedule.bannerImage = bannerFile.path;
+      if (file.fieldname === "leagueLogo") {
+        schedule.leagueLogo = file.path;
+      }
+
+      if (file.fieldname === "leagueBanner") {
+        schedule.leagueBanner = file.path;
+      }
+
+    });
 
     if (req.body.sections) {
       schedule.sections = parseSections(req.body, files);
@@ -253,6 +267,7 @@ exports.updateSchedule = async (req, res) => {
   }
 
 };
+
 
 
 /* ================= DELETE ================= */
