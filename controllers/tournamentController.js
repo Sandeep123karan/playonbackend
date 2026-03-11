@@ -1,111 +1,145 @@
 const Tournament = require("../models/tournamentModel");
+const Category = require("../models/Category");
 const cloudinary = require("../config/cloudinary");
 
-// ➕ Add Tournament
+
+/* ================= ADD TOURNAMENT ================= */
+
 exports.addTournament = async (req, res) => {
   try {
-    const { title } = req.body;
 
-    if (!title || !req.file) {
+    const { title, category, image } = req.body;
+
+    // image from multer OR json
+    const imageUrl = req.file?.path || image;
+
+    if (!title || !category || !imageUrl) {
       return res.status(400).json({
         success: false,
-        message: "Title and image are required",
+        message: "Title, category and image are required"
+      });
+    }
+
+    // check category
+    const categoryExist = await Category.findById(category);
+
+    if (!categoryExist) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found"
       });
     }
 
     const tournament = await Tournament.create({
       title,
-      image: req.file.path, // Cloudinary image URL
+      category,
+      image: imageUrl
     });
 
     res.status(201).json({
       success: true,
       message: "Tournament created successfully",
-      data: tournament,
+      data: tournament
     });
+
   } catch (error) {
+
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: error.message
     });
+
   }
 };
 
 
 
-// 📋 Get All Tournaments
+/* ================= GET ALL TOURNAMENTS ================= */
+
 exports.getAllTournaments = async (req, res) => {
   try {
-    const tournaments = await Tournament.find().sort({ createdAt: -1 });
+
+    const tournaments = await Tournament
+      .find()
+      .populate("category", "title icon")
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       count: tournaments.length,
-      data: tournaments,
+      data: tournaments
     });
+
   } catch (error) {
+
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: error.message
     });
+
   }
 };
 
 
 
-// 🔍 Get Single Tournament
+/* ================= GET SINGLE TOURNAMENT ================= */
+
 exports.getSingleTournament = async (req, res) => {
   try {
-    const tournament = await Tournament.findById(req.params.id);
+
+    const tournament = await Tournament
+      .findById(req.params.id)
+      .populate("category", "title icon");
 
     if (!tournament) {
       return res.status(404).json({
         success: false,
-        message: "Tournament not found",
+        message: "Tournament not found"
       });
     }
 
     res.status(200).json({
       success: true,
-      data: tournament,
+      data: tournament
     });
+
   } catch (error) {
+
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: error.message
     });
+
   }
 };
 
 
 
-// ✏️ Update Tournament
+/* ================= UPDATE TOURNAMENT ================= */
+
 exports.updateTournament = async (req, res) => {
   try {
-    const { title } = req.body;
+
+    const { title, category, image } = req.body;
 
     const tournament = await Tournament.findById(req.params.id);
 
     if (!tournament) {
       return res.status(404).json({
         success: false,
-        message: "Tournament not found",
+        message: "Tournament not found"
       });
     }
 
-    // Update title
-    if (title) {
-      tournament.title = title;
-    }
+    if (title) tournament.title = title;
 
-    // Update image
-    if (req.file) {
+    if (category) tournament.category = category;
 
-      // delete old image from cloudinary
+    if (req.file?.path) {
+
+      // delete old cloudinary image
       if (tournament.image) {
+
         const publicId = tournament.image
           .split("/")
           .slice(-2)
@@ -116,6 +150,10 @@ exports.updateTournament = async (req, res) => {
       }
 
       tournament.image = req.file.path;
+
+    } else if (image) {
+
+      tournament.image = image;
     }
 
     await tournament.save();
@@ -123,34 +161,37 @@ exports.updateTournament = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Tournament updated successfully",
-      data: tournament,
+      data: tournament
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: error.message
     });
+
   }
 };
 
 
 
-// ❌ Delete Tournament
+/* ================= DELETE TOURNAMENT ================= */
+
 exports.deleteTournament = async (req, res) => {
   try {
+
     const tournament = await Tournament.findById(req.params.id);
 
     if (!tournament) {
       return res.status(404).json({
         success: false,
-        message: "Tournament not found",
+        message: "Tournament not found"
       });
     }
 
-    // delete image from cloudinary
     if (tournament.image) {
+
       const publicId = tournament.image
         .split("/")
         .slice(-2)
@@ -164,14 +205,39 @@ exports.deleteTournament = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Tournament deleted successfully",
+      message: "Tournament deleted successfully"
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message,
+      message: error.message
     });
+
+  }
+};
+exports.getTournamentsByCategory = async (req, res) => {
+  try {
+
+    const { categoryId } = req.params;
+
+    const tournaments = await Tournament
+      .find({ category: categoryId })
+      .populate("category", "title icon");
+
+    res.status(200).json({
+      success: true,
+      count: tournaments.length,
+      data: tournaments
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
   }
 };
