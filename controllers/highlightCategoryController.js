@@ -1,4 +1,7 @@
+
+
 const HighlightCategory = require("../models/highlightCategoryModel");
+const Category = require("../models/Category");
 
 
 /* ===============================
@@ -7,37 +10,50 @@ const HighlightCategory = require("../models/highlightCategoryModel");
 exports.addHighlightCategory = async (req, res) => {
   try {
 
-    const { title, description, image } = req.body;
+    const { category, title, description, image } = req.body;
 
-    if (!title || !description || !image) {
+    if (!category || !title || !description || !image) {
       return res.status(400).json({
         success: false,
-        message: "Title, description and image are required"
+        message: "Category, title, description and image are required"
       });
     }
 
-    const newCategory = new HighlightCategory({
+    // check category exist
+    const categoryExist = await Category.findById(category);
+
+    if (!categoryExist) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found"
+      });
+    }
+
+    const newCategory = await HighlightCategory.create({
+      category,
       title,
       description,
       image
     });
 
-    const savedCategory = await newCategory.save();
-
     res.status(201).json({
       success: true,
       message: "Highlight category added successfully",
-      data: savedCategory
+      data: newCategory
     });
 
   } catch (error) {
+
+    console.log("Add Highlight Category Error:", error);
+
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message
+      message: error.message
     });
+
   }
 };
+
 
 
 /* ===============================
@@ -48,6 +64,7 @@ exports.getHighlightCategories = async (req, res) => {
 
     const categories = await HighlightCategory
       .find()
+      .populate("category", "title icon")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -57,13 +74,15 @@ exports.getHighlightCategories = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message
+      message: error.message
     });
+
   }
 };
+
 
 
 /* ===============================
@@ -74,7 +93,9 @@ exports.getSingleHighlightCategory = async (req, res) => {
 
     const { id } = req.params;
 
-    const category = await HighlightCategory.findById(id);
+    const category = await HighlightCategory
+      .findById(id)
+      .populate("category", "title icon");
 
     if (!category) {
       return res.status(404).json({
@@ -89,13 +110,15 @@ exports.getSingleHighlightCategory = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message
+      message: error.message
     });
+
   }
 };
+
 
 
 /* ===============================
@@ -105,11 +128,25 @@ exports.updateHighlightCategory = async (req, res) => {
   try {
 
     const { id } = req.params;
-    const { title, description, image } = req.body;
+    const { category, title, description, image } = req.body;
 
-    const category = await HighlightCategory.findByIdAndUpdate(
+    if (category) {
+
+      const categoryExist = await Category.findById(category);
+
+      if (!categoryExist) {
+        return res.status(404).json({
+          success: false,
+          message: "Category not found"
+        });
+      }
+
+    }
+
+    const updatedCategory = await HighlightCategory.findByIdAndUpdate(
       id,
       {
+        category,
         title,
         description,
         image
@@ -117,7 +154,7 @@ exports.updateHighlightCategory = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    if (!category) {
+    if (!updatedCategory) {
       return res.status(404).json({
         success: false,
         message: "Highlight category not found"
@@ -127,17 +164,19 @@ exports.updateHighlightCategory = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Highlight category updated successfully",
-      data: category
+      data: updatedCategory
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message
+      message: error.message
     });
+
   }
 };
+
 
 
 /* ===============================
@@ -163,10 +202,39 @@ exports.deleteHighlightCategory = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
-      message: "Server error",
-      error: error.message
+      message: error.message
     });
+
+  }
+};
+/* ===============================
+   GET HIGHLIGHT CATEGORY BY CATEGORY ID
+================================ */
+exports.getHighlightCategoryByCategory = async (req, res) => {
+  try {
+
+    const { categoryId } = req.params;
+
+    const categories = await HighlightCategory
+      .find({ category: categoryId })
+      .populate("category", "title icon")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: categories.length,
+      data: categories
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
   }
 };
