@@ -3,32 +3,45 @@ const router = express.Router();
 
 const tournamentController = require("../controllers/tournamentController");
 const { protectAdmin, adminOnly } = require("../middleware/authMiddleware");
+const upload = require("../middleware/upload");
 
-const upload = require("../middleware/upload"); // 👈 important
 
-// Public Routes
+/* ================= PUBLIC ROUTES ================= */
+
+// Get all tournaments
 router.get("/", tournamentController.getAllTournaments);
+
+// Get tournaments by category
+router.get("/category/:categoryId", tournamentController.getTournamentsByCategory);
+
+// Get single tournament
 router.get("/:id", tournamentController.getSingleTournament);
 
-// Protected Routes
+
+
+/* ================= ADMIN ROUTES ================= */
+
+// Add tournament
 router.post(
   "/add",
   protectAdmin,
   adminOnly,
-  upload.single("image"), // 👈 image upload
+  upload.single("image"),
   tournamentController.addTournament
 );
 
+// Update tournament
 router.put(
-  "/:id",
+  "/update/:id",
   protectAdmin,
   adminOnly,
-  upload.single("image"), // 👈 image update
+  upload.single("image"),
   tournamentController.updateTournament
 );
 
+// Delete tournament
 router.delete(
-  "/:id",
+  "/delete/:id",
   protectAdmin,
   adminOnly,
   tournamentController.deleteTournament
