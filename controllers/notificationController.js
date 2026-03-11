@@ -1,7 +1,7 @@
 const admin = require("../config/firebase");
 const User = require("../models/User");
 
-let notifications = []; // temporary storage
+let notifications = [];
 
 // ================= SEND NOTIFICATION =================
 const sendNotificationToAll = async (req, res) => {
@@ -16,9 +16,15 @@ const sendNotificationToAll = async (req, res) => {
     }
 
     // Get users with FCM token
-    const users = await User.find({ fcmToken: { $ne: null } });
+    const users = await User.find({
+      fcmToken: { $exists: true, $ne: null }
+    });
 
-    const tokens = users.map(user => user.fcmToken);
+    // Extract tokens
+    let tokens = users.map(user => user.fcmToken);
+
+    // Remove duplicates
+    tokens = [...new Set(tokens)];
 
     if (tokens.length === 0) {
       return res.json({
@@ -42,8 +48,13 @@ const sendNotificationToAll = async (req, res) => {
       }
     });
 
-    // Debug logs
-    console.log("FCM RESPONSE:", response.responses);
+    // Debug errors
+    response.responses.forEach((resp, idx) => {
+      if (!resp.success) {
+        console.log("FCM Error for token:", tokens[idx]);
+        console.log(resp.error);
+      }
+    });
 
     // Save notification history
     notifications.push({
@@ -53,7 +64,7 @@ const sendNotificationToAll = async (req, res) => {
     });
 
     res.json({
-      message: "Notification sent",
+      message: "Notification processed",
       totalTokens: tokens.length,
       successCount: response.successCount,
       failureCount: response.failureCount,
@@ -70,7 +81,6 @@ const sendNotificationToAll = async (req, res) => {
 
   }
 };
-
 
 
 // ================= GET NOTIFICATIONS =================
@@ -90,7 +100,6 @@ const getNotifications = async (req, res) => {
 
   }
 };
-
 
 module.exports = {
   sendNotificationToAll,
