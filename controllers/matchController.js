@@ -1,292 +1,183 @@
 const MatchCard = require("../models/matchCardModel");
 const mongoose = require("mongoose");
+const uploadToBunny = require("../utils/uploadToBunny");
 
+const controller = {};
 
-/* ===============================
-   ➕ ADD MATCH
-================================ */
+/* ================= COMMON UPLOAD ================= */
+const uploadFile = async (file, folder) => {
+  if (!file) return "";
+  return await uploadToBunny(
+    file.buffer,
+    `${folder}/${Date.now()}-${file.originalname}`
+  );
+};
 
-exports.addMatch = async (req, res) => {
+/* ================= STATUS FUNCTION ================= */
+const getMatchStatus = (matchDate, matchTime) => {
+  const now = new Date();
+
+  const matchDateTime = new Date(matchDate);
+
+  if (matchTime) {
+    const [h, m] = matchTime.split(":");
+    matchDateTime.setHours(h, m, 0, 0);
+  }
+
+  return now >= matchDateTime ? "LIVE" : "UPCOMING";
+};
+
+/* ================= ADD MATCH ================= */
+controller.addMatch = async (req, res) => {
   try {
-
     const {
       tournamentId,
       title,
-      matchType,
-      videoUrl,
-      league,
       team1,
       team2,
       matchDate,
-      matchTime,
-      venue,
-      isLive
+      matchTime
     } = req.body;
 
-    // uploaded images from cloudinary
-    const imageUrl = req.files?.imageUrl?.[0]?.path || "";
-    const team1Logo = req.files?.team1Logo?.[0]?.path || "";
-    const team2Logo = req.files?.team2Logo?.[0]?.path || "";
-
-    // validation
-    if (!tournamentId || !title || !team1 || !team2) {
-      return res.status(400).json({
-        success: false,
-        message: "tournamentId, title, team1, team2 are required"
-      });
+    if (!tournamentId || !title || !team1 || !team2 || !matchDate) {
+      return res.status(400).json({ success: false, message: "Missing fields" });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid tournamentId"
-      });
-    }
+    const image = await uploadFile(req.files?.image?.[0], "matches/image");
+    const team1Logo = await uploadFile(req.files?.team1Logo?.[0], "matches/team1");
+    const team2Logo = await uploadFile(req.files?.team2Logo?.[0], "matches/team2");
+    const video = await uploadFile(req.files?.video?.[0], "matches/video");
+
+    // 🔥 STATUS AUTO
+    const status = getMatchStatus(matchDate, matchTime);
 
     const match = await MatchCard.create({
-      tournamentId,
-      title,
-      imageUrl,
-      matchType,
-      videoUrl,
-      league,
-      team1,
-      team2,
+      ...req.body,
+      imageUrl: image,
       team1Logo,
       team2Logo,
-      matchDate,
-      matchTime,
-      venue,
-      isLive
+      videoUrl: video,
+      matchType: status
     });
 
-    res.status(201).json({
-      success: true,
-      message: "Match created successfully",
-      data: match
-    });
+    res.json({ success: true, data: match });
 
-  } catch (error) {
-
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
-
-/* ===============================
-   📋 GET ALL MATCHES
-================================ */
-
-exports.getAllMatches = async (req, res) => {
+/* ================= GET ALL ================= */
+controller.getAllMatches = async (req, res) => {
   try {
+    const data = await MatchCard.find().populate("tournamentId", "title");
 
-    const matches = await MatchCard
-      .find({ tournamentId: { $ne: null } })
-      .populate("tournamentId", "title")
-      .sort({ matchDate: 1 });
+    const updated = data.map(match => {
+      const status = getMatchStatus(match.matchDate, match.matchTime);
 
-    res.status(200).json({
-      success: true,
-      count: matches.length,
-      data: matches
+      return {
+        ...match.toObject(),
+        matchType: status // 🔥 realtime status
+      };
     });
 
-  } catch (error) {
+    res.json({ success: true, data: updated });
 
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
-
-/* ===============================
-   📋 GET MATCHES BY TOURNAMENT
-================================ */
-
-exports.getMatchesByTournament = async (req, res) => {
+/* ================= GET BY TOURNAMENT ================= */
+controller.getMatchesByTournament = async (req, res) => {
   try {
-
     const { tournamentId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid tournamentId"
-      });
+      return res.status(400).json({ success: false, message: "Invalid ID" });
     }
 
-    const matches = await MatchCard
-      .find({ tournamentId })
-      .sort({ matchDate: 1 });
+    const data = await MatchCard.find({ tournamentId });
 
-    res.status(200).json({
-      success: true,
-      count: matches.length,
-      data: matches
+    const updated = data.map(match => {
+      const status = getMatchStatus(match.matchDate, match.matchTime);
+      return { ...match.toObject(), matchType: status };
     });
 
-  } catch (error) {
+    res.json({ success: true, data: updated });
 
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
-
-/* ===============================
-   🔍 GET SINGLE MATCH
-================================ */
-
-exports.getSingleMatch = async (req, res) => {
+/* ================= GET SINGLE ================= */
+controller.getSingleMatch = async (req, res) => {
   try {
-
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid match id"
-      });
-    }
-
-    const match = await MatchCard
-      .findById(id)
-      .populate("tournamentId", "title");
+    const match = await MatchCard.findById(req.params.id);
 
     if (!match) {
-      return res.status(404).json({
-        success: false,
-        message: "Match not found"
-      });
+      return res.status(404).json({ success: false, message: "Not found" });
     }
 
-    res.status(200).json({
+    const status = getMatchStatus(match.matchDate, match.matchTime);
+
+    res.json({
       success: true,
-      data: match
+      data: {
+        ...match.toObject(),
+        matchType: status
+      }
     });
 
-  } catch (error) {
-
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
-
-/* ===============================
-   ✏ UPDATE MATCH
-================================ */
-
-exports.updateMatch = async (req, res) => {
+/* ================= UPDATE ================= */
+controller.updateMatch = async (req, res) => {
   try {
+    const match = await MatchCard.findById(req.params.id);
+    if (!match) return res.status(404).json({ success: false });
 
-    const { id } = req.params;
+    // FILES
+    if (req.files?.image)
+      match.imageUrl = await uploadFile(req.files.image[0], "matches/image");
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid match id"
-      });
-    }
+    if (req.files?.team1Logo)
+      match.team1Logo = await uploadFile(req.files.team1Logo[0], "matches/team1");
 
-    const match = await MatchCard.findById(id);
+    if (req.files?.team2Logo)
+      match.team2Logo = await uploadFile(req.files.team2Logo[0], "matches/team2");
 
-    if (!match) {
-      return res.status(404).json({
-        success: false,
-        message: "Match not found"
-      });
-    }
+    if (req.files?.video)
+      match.videoUrl = await uploadFile(req.files.video[0], "matches/video");
 
-    // update fields
+    // BODY UPDATE
     Object.assign(match, req.body);
 
-    // update images if uploaded
-    if (req.files?.imageUrl) {
-      match.imageUrl = req.files.imageUrl[0].path;
-    }
-
-    if (req.files?.team1Logo) {
-      match.team1Logo = req.files.team1Logo[0].path;
-    }
-
-    if (req.files?.team2Logo) {
-      match.team2Logo = req.files.team2Logo[0].path;
-    }
+    // 🔥 STATUS AUTO (VERY IMPORTANT)
+    const status = getMatchStatus(match.matchDate, match.matchTime);
+    match.matchType = status;
 
     await match.save();
 
-    res.status(200).json({
-      success: true,
-      message: "Match updated successfully",
-      data: match
-    });
+    res.json({ success: true, data: match });
 
-  } catch (error) {
-
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
-
-/* ===============================
-   ❌ DELETE MATCH
-================================ */
-
-exports.deleteMatch = async (req, res) => {
+/* ================= DELETE ================= */
+controller.deleteMatch = async (req, res) => {
   try {
-
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid match id"
-      });
-    }
-
-    const match = await MatchCard.findByIdAndDelete(id);
-
-    if (!match) {
-      return res.status(404).json({
-        success: false,
-        message: "Match not found"
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Match deleted successfully"
-    });
-
-  } catch (error) {
-
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
+    await MatchCard.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
+
+module.exports = controller;
